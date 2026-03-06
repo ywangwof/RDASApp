@@ -14,6 +14,7 @@ load("stack-intel-oneapi-mpi/2021.13")
 load("jedi-mpas-env/1.0.0")
 load("jedi-fv3-env/1.0.0")
 load("py-jinja2/3.1.4")
+load("nco/5.2.4")
 
 setenv("CC","mpiicc")
 setenv("FC","mpiifort")

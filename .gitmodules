@@ -55,8 +55,8 @@
 	ignore = all
 [submodule "sorc/ufo"]
 	path = sorc/ufo
-	url = https://github.com/jcsda/ufo
-	branch = develop
+	url = https://github.com/ywangwof/ufo.git
+	branch = NSSL_WoFS
 	ignore = all
 [submodule "sorc/vader"]
 	path = sorc/vader

@@ -23,7 +23,7 @@ START=$(date +%s)
 dir_root="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 source $dir_root/ush/detect_machine.sh
-source $dir_root/ush/init.sh
+$dir_root/ush/init.sh
 
 # ==============================================================================
 usage() {
@@ -119,7 +119,7 @@ while getopts "p:c:m:j:t:b:r:w:hvfsxd" opt; do
 done
 
 case ${BUILD_TARGET} in
-  hera | orion | hercules | jet | gaeac? | wcoss2 | ursa | derecho)
+  hera | orion | hercules | jet | gaeac? | wcoss2 | ursa | derecho | hostgeneric)
     echo "Building RDASApp on $BUILD_TARGET"
     echo "  Build initiated `date`"
     if [[ "${BUILD_TARGET}" != *gaea* ]] &&  [[ "${BUILD_TARGET}" != *derecho* ]]; then
@@ -194,14 +194,9 @@ fi
 if [[ $BUILD_JCB == 'YES' ]]; then
   cd $dir_root/sorc/jcb
   python jcb_client_init.py
-  # Build an example jedi.yaml
-  #PYTHONPATH="${PYTHONPATH}:$dir_root/sorc/jcb/src/:$dir_root/build/lib/python3.*:${dir_root}/sorc/wxflow/src"
-  #cd $dir_root/sorc/jcb/src/jcb/configuration/apps/rdas/test/client_integration
-  #python run.py
   # Link the RDASApp/parm/jcb-rdas regular folder instead of submodule
   cd $dir_root/sorc/jcb/src/jcb/configuration/apps/
-  mv rdas rdas.bak
-  ln -sf $dir_root/parm/jcb-rdas rdas
+  ln -snf $dir_root/parm/jcb-rdas rdas
   cd ${BUILD_DIR}
 fi
 
@@ -230,6 +225,7 @@ if [[ $BUILD_RRFS_TEST == 'YES' ]]; then
 #    rrfs_mpasjedi_2024052700_3denvar.yaml
 #    rrfs_mpasjedi_2024052700_getkf_observer.yaml
 #    rrfs_mpasjedi_2024052700_getkf_solver.yaml
+    rrfs_mpasjedi_2024052700_3dvar.yaml
 
     # Observation ctests (fv3jedi & 3dvar only)
     rrfs_fv3jedi_2024052700_3dvar_conv_surface.yaml
@@ -269,6 +265,10 @@ fi
 # Copy workaround codes (remove these as soon as PRs are merged)
 if [[ $BUILD_WORKAROUND == 'YES' ]]; then
 
+  # Apply workaround patches (git commit-base workaround method)
+  # Need to convert all the copy-based workaround methods to commit-based method
+  $dir_root/ush/apply_patches.sh
+
   # Workaround for regional GSIBEC
   # Saber PR #1088: https://github.com/JCSDA-internal/saber/pull/1088
   cp ../sorc/_workaround_/saber/GSIParameters.h        ../sorc/saber/src/saber/gsi/utils/GSIParameters.h
@@ -276,7 +276,8 @@ if [[ $BUILD_WORKAROUND == 'YES' ]]; then
   cp ../sorc/_workaround_/saber/gsi_covariance_mod.f90 ../sorc/saber/src/saber/gsi/covariance/gsi_covariance_mod.f90
   cp ../sorc/_workaround_/saber/gsi_grid_mod.f90       ../sorc/saber/src/saber/gsi/grid/gsi_grid_mod.f90
   cp ../sorc/_workaround_/saber/Geometry.cc            ../sorc/saber/src/saber/interpolation/Geometry.cc
-  # No PR for gsibec yet
+  # No PR for full gsibec changes
+  # gsibec PR #88 for qoption2: https://github.com/GEOS-ESM/GSIbec/pull/88
   cp ../sorc/_workaround_/gsibec/*                     ../sorc/gsibec/src/gsibec/gsi
 
   # Workaround for adding MGBF
@@ -285,11 +286,20 @@ if [[ $BUILD_WORKAROUND == 'YES' ]]; then
   cp -r ../sorc/_workaround_/saber/mgbf/mgbf_src/*    ../sorc/saber/src/saber/mgbf/
   cp ../sorc/_workaround_/saber/mgbf/Localization.h   ../sorc/saber/src/saber/oops/Localization.h
   cp ../sorc/_workaround_/saber/mgbf/Interpolation.cc ../sorc/saber/src/saber/interpolation/Interpolation.cc
+  cp ../sorc/_workaround_/saber/mgbf/Interpolation.h  ../sorc/saber/src/saber/interpolation/Interpolation.h
   cp ../sorc/_workaround_/saber/mgbf/CMakeLists.txt   ../sorc/saber/src/saber/CMakeLists.txt
   cp ../sorc/_workaround_/saber/mgbf/compiler_flags_Intel_Fortran.cmake  ../sorc/saber/cmake/compiler_flags_Intel_Fortran.cmake
 
-  # Workaround for reading reflectivity from phy_data.nc file
-  cp ../sorc/_workaround_/fv3-jedi/fv3jedi_io_fms2_mod.f90 ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart
+  # Workaround for parallel IO developed by Dan Kokron at GDIT
+  cp ../sorc/_workaround_/fv3-jedi-io/CMakeLists.txt                        ../sorc/fv3-jedi/src/fv3jedi/CMakeLists.txt
+  cp ../sorc/_workaround_/fv3-jedi-io/Fields/fv3jedi_field_mod.f90          ../sorc/fv3-jedi/src/fv3jedi/Fields/fv3jedi_field_mod.f90
+  cp ../sorc/_workaround_/fv3-jedi-io/Geometry/fv3jedi_geom_mod.f90         ../sorc/fv3-jedi/src/fv3jedi/Geometry/fv3jedi_geom_mod.f90
+  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/IOFms.cc                ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/IOFms.cc
+  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/IOFms.interface.F90     ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/IOFms.interface.F90
+  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/IOFms.interface.h       ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/IOFms.interface.h
+  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/fv3jedi_io_fms2_mod.f90 ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/fv3jedi_io_fms2_mod.f90
+  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/module_fv3lam_stats.f90 ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/module_fv3lam_stats.f90
+  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/module_mpi_arrange.f90  ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/module_mpi_arrange.f90
 
 fi
 

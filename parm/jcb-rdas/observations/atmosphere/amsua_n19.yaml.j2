@@ -1,8 +1,5 @@
      - obs space:
          name: amsua_n19
-         distribution:
-           name: "{{distribution}}"
-           halo size: 500e3
          obsdatain:
            engine:
              type: H5File
@@ -10,12 +7,15 @@
              missing file action: "warn"
          obsdataout:
            empty obs space action: "{{empty_obs_space_action}}"
+           write multiple files: {{write_multiple_files | default(false) }}
            engine:
              type: H5File
              obsfile: jdiag_amsua_n19.nc
+         io pool:
+           max pool size: {{ max_pool_size | default(1) }}
          simulated variables: [brightnessTemperature]
          observed variables: [brightnessTemperature]
-         channels: &amsua_n19_channels {{amsua_simulated_channels}}
+         channels: &amsua_n19_channels {{ get_satellite_variable(observation_from_jcb, "simulated") }}
        obs operator:
          name: CRTM
          Absorbers: [H2O,O3,CO2]
@@ -30,9 +30,6 @@
            #IRVISlandCoeff: IGBP
          linear obs operator:
            Absorbers: [H2O, O3]
-       obs localizations:
-         - localization method: Horizontal Gaspari-Cohn
-           lengthscale: 200e3 # orig
        obs bias:
          input file: data/satbias_in/amsua_n19.satbias.nc
          output file: data/satbias_out/amsua_n19.satbias.nc
@@ -177,7 +174,7 @@
            channels: *amsua_n19_channels
            options:
              channels: *amsua_n19_channels
-             obserr_clearsky: &amsua_n19_error {{amsua_obs_error}}
+             obserr_clearsky: &amsua_n19_error  [{{ get_satellite_variable(observation_from_jcb, "error") }}]
              clwret_function:
                name: ObsFunction/CLWRetMW
                options:
@@ -380,7 +377,7 @@
                  err1:  [20.000, 18.000, 12.000,  3.000,  0.500,
                           0.300,  0.230,  0.250,  0.250,  0.350,
                           0.400,  0.550,  0.800,  3.000, 18.000]
-             obserr_bound_max: {{amsua_obserr_bound_max}}
+             obserr_bound_max: [{{ get_satellite_variable(observation_from_jcb, "ermax") }}]
          action:
            name: reject
        #  Inter-channel check
@@ -394,7 +391,7 @@
            options:
              channels: *amsua_n19_channels
              sensor: amsua_n19
-             use_flag: &amsua_n19_use_flag {{amsua_n19_use_flag}}
+             use_flag: &amsua_n19_use_flag [{{ get_satellite_variable(observation_from_jcb, "active") }}]
          maxvalue: 1.0e-12
          action:
            name: reject

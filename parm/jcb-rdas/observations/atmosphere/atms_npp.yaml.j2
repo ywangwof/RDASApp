@@ -1,8 +1,5 @@
      - obs space:
          name: atms_npp
-         distribution:
-           name: "{{distribution}}"
-           halo size: 500e3
          obsdatain:
            engine:
              type: H5File
@@ -10,12 +7,15 @@
              missing file action: "warn"
          obsdataout:
            empty obs space action: "{{empty_obs_space_action}}"
+           write multiple files: {{write_multiple_files | default(false) }}
            engine:
              type: H5File
-             obsfile: jdiag_atms_npp.nc4
+             obsfile: jdiag_atms_npp.nc
+         io pool:
+           max pool size: {{ max_pool_size | default(1) }}
          simulated variables: [brightnessTemperature]
          observed variables: [brightnessTemperature]
-         channels: &atms_npp_channels {{atms_simulated_channels}}
+         channels: &atms_npp_channels {{ get_satellite_variable(observation_from_jcb, "simulated") }}
        obs operator:
            name: CRTM
            Absorbers: [H2O,O3,CO2]
@@ -30,9 +30,6 @@
              #IRVISlandCoeff: IGBP
            linear obs operator:
              Absorbers: [H2O, O3]
-       obs localizations:
-         - localization method: Horizontal Gaspari-Cohn
-           lengthscale: 200e3 # orig
 
        obs bias:
          input file:  data/satbias_in/atms_npp.satbias.nc
@@ -354,7 +351,7 @@
              channels: *atms_npp_channels
              options:
                channels: *atms_npp_channels
-               obserr_clearsky: &atms_npp_error {{atms_obs_error}}
+               obserr_clearsky: &atms_npp_error [{{ get_satellite_variable(observation_from_jcb, "error") }}]
                clwret_function:
                  name: CLWRetFromObs@DerivedMetaData
                obserr_function:
@@ -517,7 +514,7 @@
                  name: InitialObsError@DerivedMetaData
                  channels: *atms_npp_channels
                  threhold: 3
-               obserr_bound_max: {{atms_obserr_bound_max}}
+               obserr_bound_max: [{{ get_satellite_variable(observation_from_jcb, "ermax") }}]
 
        - filter: Background Check
          filter variables:
@@ -544,7 +541,7 @@
              channels: *atms_npp_channels
              use passive_bc: true
              sensor: atms_npp
-             use_flag: &atms_npp_use_flag {{atms_npp_use_flag}}
+             use_flag: &atms_npp_use_flag [{{ get_satellite_variable(observation_from_jcb, "active") }}]
          actions:
            - name: set
              flag: InterChannelConsistency

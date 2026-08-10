@@ -4,14 +4,14 @@ algorithm: 3dvar
 # Search path for model and obs for JCB (relative for the submodule, or can be absolute)
 # --------------------------------------------------------------------------------------
 app_path_algorithm: rdas/algorithm/atmosphere
-app_path_model: rdas/model/atmosphere
+app_path_model: rdas/model/fv3/atmosphere
 app_path_observations: rdas/observations/atmosphere
 app_path_observation_chronicle: rdas/observation_chronicle/atmosphere
 
 
 # Places where we deviate from the generic file name of a yaml
 # ------------------------------------------------------------
-#final_increment_file: atmosphere_final_increment_gaussian
+final_increment_file: atmosphere_final_increment
 output_file: atmosphere_output
 output_ensemble_increments_file: atmosphere_output_ensemble_increments_gaussian
 model_file: atmosphere_model_pseudo
@@ -27,6 +27,10 @@ bound_to_include: begin
 minimizer: DRPCG
 final_diagnostics_departures: oman
 number_of_outer_loops: 2
+ninner: 50
+gradient_norm_reduction: 1e-3
+#write_increment_outer_loop_1: true
+#write_increment_outer_loop_2: true
 distribution: RoundRobin
 empty_obs_space_action: create output
 
@@ -35,8 +39,8 @@ analysis_variables:
 - northward_wind
 - air_temperature
 - water_vapor_mixing_ratio_wrt_moist_air
-- air_pressure_at_surface
 - ozone_mass_mixing_ratio
+#- air_pressure_thickness
 - cloud_liquid_water
 - cloud_liquid_ice
 - rain_water
@@ -44,6 +48,7 @@ analysis_variables:
 - graupel
 - upward_air_velocity
 - equivalent_reflectivity_factor
+- air_pressure_at_surface
 
 # Testing
 # -------
@@ -70,8 +75,6 @@ atmosphere_fv3jedi_files_path: DataFix
 atmosphere_ntiles: 1
 atmosphere_io_layout_x: 1
 atmosphere_io_layout_y: 1
-gradient_norm_reduction: 1e-3
-ninner: 50
 
 # Background
 atmosphere_background_path: "./"
@@ -103,10 +106,8 @@ state_variables:
 - vtype
 - stype
 - vfrac
-- soilt
-- soilm
-- eastward_wind_at_surface
-- northward_wind_at_surface
+- tslb
+- smois
 - air_pressure_at_surface
 - rain_water
 - snow_water
@@ -116,6 +117,10 @@ state_variables:
 - rain_number_concentration
 - upward_air_velocity
 - equivalent_reflectivity_factor
+- air_temperature_at_2m
+- water_vapor_mixing_ratio_wrt_moist_air_at_2m
+- eastward_wind_at_surface
+- northward_wind_at_surface
 
 eastward_wind: ua
 northward_wind: va
@@ -128,10 +133,8 @@ cloud_liquid_water: liq_wat
 ozone_mass_mixing_ratio: o3mr
 geopotential_height_times_gravity_at_surface: phis
 skin_temperature_at_surface: tsfc
-soilt: tslb
-soilm: smois
-eastward_wind_at_surface: u_srf
-northward_wind_at_surface: v_srf
+tslb: tslb
+smois: smois
 rain_water: rainwat
 snow_water: snowwat
 graupel: graupel
@@ -140,6 +143,10 @@ cloud_ice_number_concentration: ice_nc
 rain_number_concentration: rain_nc
 upward_air_velocity: W
 equivalent_reflectivity_factor: ref_f3d
+air_temperature_at_2m: t2m
+water_vapor_mixing_ratio_wrt_moist_air_at_2m: q2m
+eastward_wind_at_surface: u_srf
+northward_wind_at_surface: v_srf
 
 abi_simulated_channels: 7-16
 
@@ -153,7 +160,7 @@ lat_start: -29.335138
 lat_end: 29.335138
 lon_start: -50.033098
 lon_end: 50.033098
-north_pole_lat: 51.499998
+north_pole_lat: 51.499999
 north_pole_lon: 82.500018
 gsi_bands: 14
 
@@ -190,7 +197,7 @@ observations:
 #- aircar_airTemperature_133
 #- aircar_specificHumidity_133
 #- aircar_winds_233
-#
+
 #- aircft_airTemperature_130
 #- aircft_airTemperature_131
 #- aircft_airTemperature_134

@@ -65,8 +65,8 @@
 	ignore = all
 [submodule "sorc/mpas"]
 	path = sorc/mpas
-	url = https://github.com/RRFSx/MPAS-Model
-	branch = gsl/develop
+	url = https://github.com/ywangwof/frdd-MPAS-Model
+	branch = NSSL_WoFS
 	ignore = all
 [submodule "sorc/mpas-jedi"]
 	path = sorc/mpas-jedi

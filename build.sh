@@ -301,6 +301,14 @@ if [[ $BUILD_WORKAROUND == 'YES' ]]; then
   cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/module_fv3lam_stats.f90 ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/module_fv3lam_stats.f90
   cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/module_mpi_arrange.f90  ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/module_mpi_arrange.f90
 
+  # Workaround: register the GOESCloudWaterPath obs operator in the ufo build.
+  # The operator source (src/ufo/operators/goescloudwaterpath) is present in the
+  # ufo submodule, but the current ufo commit's src/ufo/CMakeLists.txt is missing
+  # the matching "add_subdirectory( operators/goescloudwaterpath )" line, so the
+  # source is never compiled into libufo and the operator is absent from the
+  # ObsOperatorFactory (needed for WoFS CWP DA). Remove once merged upstream.
+  cp ../sorc/_workaround_/ufo/CMakeLists.txt                                ../sorc/ufo/src/ufo/CMakeLists.txt
+
 fi
 
 # Build RDAS-specific tools (e.g. rdas_ua2u.x)

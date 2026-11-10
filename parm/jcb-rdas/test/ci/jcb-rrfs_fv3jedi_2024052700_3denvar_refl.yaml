@@ -17,6 +17,7 @@ output_ensemble_increments_file: atmosphere_output_ensemble_increments_gaussian
 model_file: atmosphere_model_pseudo
 initial_condition_file: atmosphere_background
 background_error_file: atmosphere_background_error_3denvar_mgbf
+vader_custom_cookbook_file: atmosphere_vader_custom_cookbook
 
 # Global analysis things
 # ----------------------
@@ -33,6 +34,7 @@ gradient_norm_reduction: 1e-3
 #write_increment_outer_loop_2: true
 distribution: RoundRobin
 empty_obs_space_action: create output
+write_into_existing_files: false
 
 analysis_variables:
 - eastward_wind
@@ -49,6 +51,14 @@ analysis_variables:
 - upward_air_velocity
 - equivalent_reflectivity_factor
 - air_pressure_at_surface
+
+fields_to_write:
+- eastward_wind
+- northward_wind
+- air_temperature
+- water_vapor_mixing_ratio_wrt_moist_air
+- ozone_mass_mixing_ratio
+- air_pressure_thickness
 
 # Testing
 # -------
@@ -98,7 +108,7 @@ state_variables:
 - cloud_liquid_ice
 - cloud_liquid_water
 - ozone_mass_mixing_ratio
-- geopotential_height_times_gravity_at_surface
+- geopotential_at_surface
 - f10m
 - slmsk
 - sheleg
@@ -131,7 +141,7 @@ water_vapor_mixing_ratio_wrt_moist_air: sphum
 cloud_liquid_ice: ice_wat
 cloud_liquid_water: liq_wat
 ozone_mass_mixing_ratio: o3mr
-geopotential_height_times_gravity_at_surface: phis
+geopotential_at_surface: phis
 skin_temperature_at_surface: tsfc
 tslb: tslb
 smois: smois
@@ -184,6 +194,8 @@ atmosphere_final_increment_prefix: "./anl/atminc."
 
 # Observation things
 # ------------------
+use_error_inflation: true
+
 observations:
 # Upper-air conventional
 #- adpupa_airTemperature_120

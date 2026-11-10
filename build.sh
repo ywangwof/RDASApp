@@ -44,6 +44,7 @@ usage() {
   echo "  -d  compile in the debug mode          DEFAULT: NO"
   echo "  -w  compile with workaround codes      DEFAULT: YES"
   echo "  -r  compile rdas tools (ua2u)          DEFAULT: (fv3:YES; mpas:NO)"
+  echo "  -i  build i-jedi (and mist)            DEFAULT: NO"
   echo "  -h  display this message and quit"
   echo
   exit 1
@@ -67,8 +68,9 @@ DEBUG_OPT=""
 BUFRQUERY_OPT=""
 BUILD_JCB="YES"
 BUILD_WORKAROUND="YES"
+BUILD_IJEDI="NO"
 
-while getopts "p:c:m:j:t:b:r:w:hvfsxd" opt; do
+while getopts "p:c:m:j:t:b:r:w:i:hvfsxd" opt; do
   case $opt in
     p)
       INSTALL_PREFIX=$OPTARG
@@ -96,6 +98,9 @@ while getopts "p:c:m:j:t:b:r:w:hvfsxd" opt; do
       ;;
     w)
       BUILD_WORKAROUND=$OPTARG
+      ;;
+    i)
+      BUILD_IJEDI=$OPTARG
       ;;
     v)
       BUILD_VERBOSE=YES
@@ -139,7 +144,7 @@ esac
 # Set default number of build jobs based on machine
 if [[ $BUILD_TARGET == 'orion' ]]; then # lower due to memory limit on login nodes
   BUILD_JOBS=${BUILD_JOBS:-4}
-elif [[ $BUILD_TARGET == 'gaeac6' ]] || [[ $BUILD_TARGET == 'ursa' ]]; then # each node has 192 cores
+elif [[ $BUILD_TARGET == gaeac* ]] || [[ $BUILD_TARGET == 'ursa' ]]; then # each node has 192 cores
   BUILD_JOBS=${BUILD_JOBS:-12}
 else # hera, hercules, jet, etc
   BUILD_JOBS=${BUILD_JOBS:-6}
@@ -217,20 +222,21 @@ if [[ $BUILD_RRFS_TEST == 'YES' ]]; then
     rrfs_fv3jedi_2024052700_3dvar.yaml
     rrfs_fv3jedi_2024052700_3denvar.yaml
     rrfs_fv3jedi_2024052700_3denvar_mgbf.yaml
-    rrfs_fv3jedi_2024052700_getkf_observer.yaml
-    rrfs_fv3jedi_2024052700_getkf_solver.yaml
+    rrfs_ijedi_2024052700_getkf_observer.yaml
+    rrfs_ijedi_2024052700_getkf_solver.yaml
+    rrfs_fv3jedi_2024052700_getkf.yaml
     rrfs_fv3jedi_2024052700_hybrid3denvar.yaml
     rrfs_fv3jedi_2024052700_hybrid3denvar_mgbf.yaml
 #    rrfs_mpasjedi_2024052700_bumploc.yaml
 #    rrfs_mpasjedi_2024052700_3denvar.yaml
-#    rrfs_mpasjedi_2024052700_getkf_observer.yaml
-#    rrfs_mpasjedi_2024052700_getkf_solver.yaml
+#    rrfs_mpasjedi_2024052700_getkf.yaml
     rrfs_mpasjedi_2024052700_3dvar.yaml
 
     # Observation ctests (fv3jedi & 3dvar only)
     rrfs_fv3jedi_2024052700_3dvar_conv_surface.yaml
     rrfs_fv3jedi_2024052700_3dvar_conv_upperair.yaml
     rrfs_fv3jedi_2024052700_3dvar_remote.yaml
+    rrfs_fv3jedi_2024052700_3dvar_rw.yaml
     rrfs_fv3jedi_2024052700_3dvar_satrad.yaml
 
     # Observation ctests (fv3jedi & 3denvar only)
@@ -267,47 +273,31 @@ if [[ $BUILD_WORKAROUND == 'YES' ]]; then
 
   # Apply workaround patches (git commit-base workaround method)
   # Need to convert all the copy-based workaround methods to commit-based method
-  $dir_root/ush/apply_patches.sh
-
-  # Workaround for regional GSIBEC
-  # Saber PR #1088: https://github.com/JCSDA-internal/saber/pull/1088
-  cp ../sorc/_workaround_/saber/GSIParameters.h        ../sorc/saber/src/saber/gsi/utils/GSIParameters.h
-  cp ../sorc/_workaround_/saber/GridCheckHelper.cc     ../sorc/saber/src/saber/gsi/utils/GridCheckHelper.cc
-  cp ../sorc/_workaround_/saber/gsi_covariance_mod.f90 ../sorc/saber/src/saber/gsi/covariance/gsi_covariance_mod.f90
-  cp ../sorc/_workaround_/saber/gsi_grid_mod.f90       ../sorc/saber/src/saber/gsi/grid/gsi_grid_mod.f90
-  cp ../sorc/_workaround_/saber/Geometry.cc            ../sorc/saber/src/saber/interpolation/Geometry.cc
-  # No PR for full gsibec changes
-  # gsibec PR #88 for qoption2: https://github.com/GEOS-ESM/GSIbec/pull/88
-  cp ../sorc/_workaround_/gsibec/*                     ../sorc/gsibec/src/gsibec/gsi
-
-  # Workaround for adding MGBF
-  # No PR yet
-  mkdir -p ../sorc/saber/src/saber/mgbf
-  cp -r ../sorc/_workaround_/saber/mgbf/mgbf_src/*    ../sorc/saber/src/saber/mgbf/
-  cp ../sorc/_workaround_/saber/mgbf/Localization.h   ../sorc/saber/src/saber/oops/Localization.h
-  cp ../sorc/_workaround_/saber/mgbf/Interpolation.cc ../sorc/saber/src/saber/interpolation/Interpolation.cc
-  cp ../sorc/_workaround_/saber/mgbf/Interpolation.h  ../sorc/saber/src/saber/interpolation/Interpolation.h
-  cp ../sorc/_workaround_/saber/mgbf/CMakeLists.txt   ../sorc/saber/src/saber/CMakeLists.txt
-  cp ../sorc/_workaround_/saber/mgbf/compiler_flags_Intel_Fortran.cmake  ../sorc/saber/cmake/compiler_flags_Intel_Fortran.cmake
+  #$dir_root/ush/apply_patches.sh
 
   # Workaround for parallel IO developed by Dan Kokron at GDIT
-  cp ../sorc/_workaround_/fv3-jedi-io/CMakeLists.txt                        ../sorc/fv3-jedi/src/fv3jedi/CMakeLists.txt
-  cp ../sorc/_workaround_/fv3-jedi-io/Fields/fv3jedi_field_mod.f90          ../sorc/fv3-jedi/src/fv3jedi/Fields/fv3jedi_field_mod.f90
-  cp ../sorc/_workaround_/fv3-jedi-io/Geometry/fv3jedi_geom_mod.f90         ../sorc/fv3-jedi/src/fv3jedi/Geometry/fv3jedi_geom_mod.f90
-  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/IOFms.cc                ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/IOFms.cc
-  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/IOFms.interface.F90     ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/IOFms.interface.F90
-  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/IOFms.interface.h       ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/IOFms.interface.h
-  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/fv3jedi_io_fms2_mod.f90 ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/fv3jedi_io_fms2_mod.f90
-  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/module_fv3lam_stats.f90 ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/module_fv3lam_stats.f90
-  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/module_mpi_arrange.f90  ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/module_mpi_arrange.f90
+  cp ../sorc/_workaround_/fv3-jedi-io/CMakeLists.txt                            ../sorc/fv3-jedi/src/fv3jedi/CMakeLists.txt
+  cp ../sorc/_workaround_/fv3-jedi-io/Fields/fv3jedi_field_mod.f90              ../sorc/fv3-jedi/src/fv3jedi/Fields/fv3jedi_field_mod.f90
+  cp ../sorc/_workaround_/fv3-jedi-io/Geometry/fv3jedi_geom_mod.f90             ../sorc/fv3-jedi/src/fv3jedi/Geometry/fv3jedi_geom_mod.f90
+  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/IOFms.h                     ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/IOFms.h
+  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/IOFms.cc                    ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/IOFms.cc
+  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/IOFms.interface.F90         ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/IOFms.interface.F90
+  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/IOFms.interface.h           ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/IOFms.interface.h
+  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/fv3jedi_io_fms2_mod.f90     ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/fv3jedi_io_fms2_mod.f90
+  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/module_fv3lam_stats.f90     ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/module_fv3lam_stats.f90
+  cp ../sorc/_workaround_/fv3-jedi-io/IO/FV3Restart/m_TwoPhaseScatterGather.f90 ../sorc/fv3-jedi/src/fv3jedi/IO/FV3Restart/m_TwoPhaseScatterGather.f90
 
-  # Workaround: register the GOESCloudWaterPath obs operator in the ufo build.
-  # The operator source (src/ufo/operators/goescloudwaterpath) is present in the
-  # ufo submodule, but the current ufo commit's src/ufo/CMakeLists.txt is missing
-  # the matching "add_subdirectory( operators/goescloudwaterpath )" line, so the
-  # source is never compiled into libufo and the operator is absent from the
-  # ObsOperatorFactory (needed for WoFS CWP DA). Remove once merged upstream.
-  cp ../sorc/_workaround_/ufo/CMakeLists.txt                                ../sorc/ufo/src/ufo/CMakeLists.txt
+  # Workaround for GSL surface operator
+  cp ../sorc/_workaround_/ufo/CMakeLists.txt   ../sorc/ufo/src/ufo/operators/sfccorrected/.
+  cp ../sorc/_workaround_/ufo/EvalSurface*     ../sorc/ufo/src/ufo/operators/sfccorrected/.
+  cp ../sorc/_workaround_/ufo/ObsSfcCorrected* ../sorc/ufo/src/ufo/operators/sfccorrected/.
+
+  # Workaround for updating surface and delp states after outerloops (fv3-jedi PR1511)
+  cp ../sorc/_workaround_/fv3-jedi/fv3jedi_state_mod.F90    ../sorc/fv3-jedi/src/fv3jedi/State/.
+  cp ../sorc/_workaround_/fv3-jedi/FieldsMetadataDefault.h  ../sorc/fv3-jedi/src/fv3jedi/FieldMetadata/.
+
+  # DuplicateThinning zero-obs space fix
+  cp ../sorc/_workaround_/ufo/DuplicateThinning.cc ../sorc/ufo/src/ufo/filters/.
 
 fi
 
@@ -327,7 +317,21 @@ else
   CMAKE_OPTS+=" -DBUILD_RDAS_TOOLS=OFF"
 fi
 
-CMAKE_OPTS+=" -DMPIEXEC_MAX_NUMPROCS:STRING=120 -DBUILD_SUPER_EXE=$BUILD_SUPER_EXE -DBUILD_RRFS_TEST=$BUILD_RRFS_TEST"
+CRTM_DATA=$dir_root/bundle/test-data-release/crtm/2.4.0
+# i-jedi (and mist) are off by default; rrfs-workflow does not need them yet
+if [[ "$BUILD_IJEDI" == "YES" ]]; then
+  # Clone mist on demand if it has not been checked out yet.
+  # mist is private (needs GitHub login), so .gitmodules sets update=none to keep recursive clones anonymous.
+  if [[ ! -e $dir_root/sorc/mist/.git ]]; then
+    echo "Cloning private mist submodule (requires GitHub access to JCSDA-internal) ..."
+    git -C $dir_root submodule update --init --checkout sorc/mist
+  fi
+  CMAKE_OPTS+=" -DBUILD_IJEDI=ON"
+else
+  CMAKE_OPTS+=" -DBUILD_IJEDI=OFF"
+fi
+
+CMAKE_OPTS+=" -DMPIEXEC_MAX_NUMPROCS:STRING=120 -DBUILD_SUPER_EXE=$BUILD_SUPER_EXE -DBUILD_RRFS_TEST=$BUILD_RRFS_TEST -DUFO_CRTM_TESTFILES_PATH=$CRTM_DATA"
 # Configure
 echo "Configuring ..."
 set -x

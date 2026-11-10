@@ -5,10 +5,11 @@
              type: H5File
              obsfile: "data/obs/ioda_sfcshp.nc"
              missing file action: "warn"
-           obsgrouping:
-             group variables: ["stationIdentification"]
-             sort variable: "pressure"
-             sort order: "descending"
+           # obsgrouping disabled: ioda's Halo assigns an entire record from its first location, which drops these horizontally-moving obs.
+           # obsgrouping:
+           #   group variables: ["stationIdentification"]
+           #   sort variable: "pressure"
+           #   sort order: "descending"
          obsdataout:
            empty obs space action: "{{empty_obs_space_action}}"
            write multiple files: {{write_multiple_files | default(false) }}
@@ -99,22 +100,28 @@
              name: reduce obs space
 
          # Duplicate Check
-         - filter: Temporal Thinning
+         - filter: DuplicateThinning
            udescriptor: "duplicate_check"
            filter variables:
            - name: windEastward
            - name: windNorthward
+           analysis_time: "{{ atmosphere_background_time_iso }}"
+           analysis_time_tolerance: PT0S
            min_spacing: PT90M
-           tolerance: PT0H
-           seed_time: "{{atmosphere_background_time_iso}}"
-           category_variable:
-             name: MetaData/longitude_latitude
+           equidistant_time_selection: after
+           variable names:
+           - MetaData/longitude
+           - MetaData/latitude
+           tolerance:
+           - 1.0e-6
+           - 1.0e-6
            where:
            - variable: ObsType/windEastward
              is_in: 282
            action:
              name: reduce obs space
 
+{% if use_online_domain_check | default(true) %}
          # Online domain check
          - filter: Bounds Check
            udescriptor: "online_domain_check"
@@ -125,6 +132,7 @@
            - name:  GeoVaLs/observable_domain_mask
            minvalue: 0.0
            maxvalue: 0.5
+{% endif %}
 
          # Initial error assignment
          - filter: Perform Action
@@ -145,6 +153,7 @@
                  xvals: [110000, 105000, 100000, 95000, 90000, 85000, 80000, 75000, 70000, 65000, 60000, 55000, 50000, 45000, 40000, 35000, 30000, 25000, 20000, 15000, 10000, 7500, 5000, 4000, 3000, 2000, 1000, 500, 400, 300, 200, 100, 0]
                  errors: [1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079, 1.079]
 
+{% if use_error_inflation | default(true) %}  # BEGIN use_error_inflation
          # Error inflation (windEastward) based on pressure check (setupw.f90)
          - filter: Perform Action
            udescriptor: "error_inflation_pressure_check"
@@ -248,6 +257,7 @@
              maxvalue: 5000.0
            - variable: ObsType/windEastward
              is_in: 282
+{% endif %}  # END use_error_inflation
 
          # Bounds Check (ObsError)
          - filter: Bounds Check

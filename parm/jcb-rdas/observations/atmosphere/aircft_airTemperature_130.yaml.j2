@@ -5,10 +5,11 @@
              type: H5File
              obsfile: "data/obs/ioda_aircft.nc"
              missing file action: "warn"
-           obsgrouping:
-             group variables: ["stationIdentification"]
-             sort variable: "pressure"
-             sort order: "descending"
+           # obsgrouping disabled: ioda's Halo assigns an entire record from its first location, which drops these horizontally-moving obs.
+           # obsgrouping:
+           #   group variables: ["stationIdentification"]
+           #   sort variable: "pressure"
+           #   sort order: "descending"
          obsdataout:
            empty obs space action: "{{empty_obs_space_action}}"
            write multiple files: {{write_multiple_files | default(false) }}
@@ -98,21 +99,29 @@
              name: reduce obs space
 
          # Duplicate Check
-         - filter: Temporal Thinning
+         - filter: DuplicateThinning
            udescriptor: "duplicate_check"
            filter variables:
            - name: airTemperature
+           analysis_time: "{{ atmosphere_background_time_iso }}"
+           analysis_time_tolerance: PT0S
            min_spacing: PT90M
-           tolerance: PT0H
-           seed_time: "{{atmosphere_background_time_iso}}"
-           category_variable:
-             name: MetaData/longitude_latitude_pressure
+           equidistant_time_selection: after
+           variable names:
+           - MetaData/longitude
+           - MetaData/latitude
+           - MetaData/pressure
+           tolerance:
+           - 1.0e-6
+           - 1.0e-6
+           - 1.0e-6
            where:
            - variable: ObsType/airTemperature
              is_in: 130
            action:
              name: reduce obs space
 
+{% if use_online_domain_check | default(true) %}
          # Online regional domain check
          - filter: Bounds Check
            udescriptor: "online_domain_check"
@@ -122,6 +131,7 @@
            - name:  GeoVaLs/observable_domain_mask
            minvalue: 0.0
            maxvalue: 0.5
+{% endif %}
 
          # Initial error assignment
          - filter: Perform Action
@@ -141,6 +151,7 @@
                  xvals: [110000, 105000, 100000, 95000, 90000, 85000, 80000, 75000, 70000, 65000, 60000, 55000, 50000, 45000, 40000, 35000, 30000, 25000, 20000, 15000, 10000, 7500, 5000, 4000, 3000, 2000, 1000, 500, 400, 300, 200, 100, 0]
                  errors: [2.4618, 2.4244, 2.3481, 2.2352, 2.0999, 1.9647, 1.8522, 1.7754, 1.7323, 1.7134, 1.7093, 1.7131, 1.717, 1.7061, 1.655, 1.5397, 1.3754, 1.2567, 1.2116, 1.252, 1.37, 1.501, 1.6004, 1.6588, 1.6865, 1.6969, 1.6998, 1.7001, 1.7, 1.7, 1.7003, 1.6999, 1.6956]
 
+{% if use_error_inflation | default(true) %}  # BEGIN use_error_inflation
          # Error inflation based on pressure check (setupt.f90)
          - filter: Perform Action
            udescriptor: "error_inflation_pressure_check"
@@ -201,6 +212,7 @@
              maxvalue: 10000.0
            - variable: ObsType/airTemperature
              is_in: 130
+{% endif %}  # END use_error_inflation
 
          # Bounds Check (ObsError)
          - filter: Bounds Check
